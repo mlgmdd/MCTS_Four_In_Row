@@ -1,7 +1,7 @@
 import numpy as np
 
 
-PLAYERS = ("White", "Black")
+PLAYERS = ("white", "black")
 
 
 class FourInRow:
@@ -30,42 +30,24 @@ class FourInRow:
                 self.last_move = (row, action)
                 return
 
-    def is_terminal(self):
+    def is_terminal(self) -> bool:
         return (self.get_winner() is not None) or (not self.get_legal_actions())  # 游戏结束条件：有玩家胜出或棋盘已满
 
     def get_winner(self):
+        """有胜利者返回胜利者, 平局或游戏未结束返回None"""
         if self.winner is not None:
             return self.winner
 
         if self.is_move_win(self.last_move):
-            self.winner = self.last_player
+            self.winner = self.last_player-1  # 0 for white, 1 for black
             return self.winner
 
-        return None  # 若没有胜利者，返回None表示平局或游戏未结束
-    
-    def is_pos_win(self, r: int, c: int, debug=False) -> bool:
-        if self.board[r][c] == 0:
-            return False
-        lines = []
-        
-        if c + 3 < self.width: 
-            lines.append([self.board[r][c+i] for i in range(4)])
-        if r + 3 < self.height:
-            lines.append([self.board[r+i][c] for i in range(4)])
-        if c + 3 < self.width and r + 3 < self.height:
-            lines.append([self.board[r+i][c+i] for i in range(4)])
-        if c - 3 >= 0 and r + 3 < self.height:
-            lines.append([self.board[r+i][c-i] for i in range(4)])
-        
-        for line in lines:
-            if 0 not in line and (1 not in line or 2 not in line):
-                return True
-        return False
+        return None
 
     def is_move_win(self, move: (int, int)) -> bool:
         r, c = move
         player = self.board[r][c]
-        print(f"checking move {move} by {player}")
+        # print(f"checking move r:{move[1]} c:{move[0]} by {player-1}")
 
         # 相对距离
         top = 3 if r + 3 <= self.height - 1 else self.height - 1 - r
@@ -75,7 +57,7 @@ class FourInRow:
         top_right = min(top, right)
         bottom_right = min(bottom, right)
         top_left = min(top, left)
-        bottom_left = min(bottom, right)
+        bottom_left = min(bottom, left)
 
         # 需要检查的点列（相对位置）
         lines = [[], [], [], []]
@@ -83,10 +65,11 @@ class FourInRow:
         lines[0] = [(x, 0) for x in range(-left, right+1)]
         lines[1] = [(0, y) for y in range(-bottom, top + 1)]
         lines[2] = [(i, i) for i in range(-bottom_left, top_right + 1)]
-        lines[3] = [(-i, i) for i in range(-top_left, bottom_right + 1)]
+        lines[3] = [(i, -i) for i in range(-top_left, bottom_right + 1)]
 
         for line in lines:
             count = 0
+            # print(line)
             for point in line:
                 if self.board[r + point[1]][c + point[0]] == player:
                     count += 1
@@ -94,6 +77,17 @@ class FourInRow:
                     count = 0
                 if count >= 4:
                     return True
+
+    def user_move(self, action: str) -> bool:
+        if not action.isdigit():
+            print("Illegal Input")
+            return False
+        action = int(action) - 1
+        if action in self.get_legal_actions():
+            self.apply_action(action)
+            return True
+        print("Illegal Position")
+        return False
 
     def print_board(self) -> None:
         self._print_line()
