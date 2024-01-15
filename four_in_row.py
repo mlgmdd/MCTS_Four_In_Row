@@ -1,9 +1,6 @@
 import numpy as np
 
 
-PLAYERS = ("white", "black")
-
-
 class FourInRow:
     def __init__(self, width, height):
         self.width, self.height = width, height
@@ -89,6 +86,12 @@ class FourInRow:
         print("Illegal Position")
         return False
 
+    def info(self):
+        print("\"四子棋\"")
+        print(f"输入横坐标落子(1~{self.width})")
+        print("棋子落在最底层")
+        print("棋子4颗连成一条直线(对角线)获胜")
+
     def print_board(self) -> None:
         self._print_line()
         for r in range(self.height - 1, -1, -1):
@@ -97,9 +100,9 @@ class FourInRow:
                 if self.board[r][c] == 0:
                     print("  ", end='')
                 elif self.board[r][c] == 1:
-                    print("□ ", end='')
-                elif self.board[r][c] == 2:
                     print("■ ", end='')
+                elif self.board[r][c] == 2:
+                    print("□ ", end='')
             print()
         self._print_line()
 

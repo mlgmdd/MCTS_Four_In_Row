@@ -8,7 +8,7 @@ PLAYERS = ("white", "black")
 
 
 class Node:
-    def __init__(self, game_state: FourInRow, player: int, parent=None, action="Root"):
+    def __init__(self, game_state: FourInRow, root_player: int, parent=None, action="Root"):
         self.game_state = game_state  # 游戏状态
         self.parent = parent  # 父节点
         self.children = []  # 子节点
@@ -16,9 +16,9 @@ class Node:
         self.visits = 0  # 访问次数
         self.untried_actions = self.game_state.get_legal_actions()  # 未尝试的动作
 
-        self.player = player
+        self.root_player = root_player
 
-        self.c = 1.4
+        self.c = 2
 
         self.depth = 0
         self.action = action
@@ -30,7 +30,7 @@ class Node:
             legal_moves = current_game_state.get_legal_actions()
             action = random.choice(legal_moves)
             current_game_state.apply_action(action)
-        # if current_game_state.get_winner() == self.player:
+        # if current_game_state.get_winner() == self.game_state.last_player:
         #     return 1  # 胜利
         # return 0  # 失败
         if current_game_state.winner is None:
@@ -42,7 +42,11 @@ class Node:
         best_child = None
         best_score = -1
         for child in self.children:
-            uct_score = (child.wins / child.visits) + self.c * np.sqrt(np.log(self.visits) / child.visits)
+            if self.game_state.last_player == self.root_player:
+                winning_rate = child.wins / child.visits
+            else:
+                winning_rate = 1.0 - child.wins / child.visits
+            uct_score = winning_rate + self.c * np.sqrt(np.log(self.visits) / child.visits)
             if uct_score > best_score:
                 best_score = uct_score
                 best_child = child
@@ -53,7 +57,7 @@ class Node:
         action = random.choice(self.untried_actions)
         new_game_state = copy.deepcopy(self.game_state)
         new_game_state.apply_action(action)
-        new_child = Node(new_game_state, player=self.player, parent=self, action=action)
+        new_child = Node(new_game_state, root_player=self.root_player, parent=self, action=action)
 
         self.children.append(new_child)
         self.untried_actions.remove(action)
@@ -74,13 +78,13 @@ class Node:
         return not self.untried_actions
 
     def __str__(self):
-        return f"[{self.action}]({self.wins}/{self.visits})"
+        return f"[{self.action}]({self.wins}/{self.visits}){self.game_state.last_player}"
 
 
 def print_tree(root, blanks=0):
     if root.visits <= 5:
         return
-    print('   '*blanks+"├─", root)
+    print('    '*blanks+"├─", root)
     children = sorted(root.children, key=lambda x: x.visits, reverse=True)
     for child in children:
         print_tree(child, blanks=blanks+1)
@@ -95,7 +99,7 @@ class MCTSApp:
         if root_state.is_terminal():
             return root_state
 
-        root = Node(root_state, player=root_state.last_player)
+        root = Node(root_state, root_player=root_state.last_player)
         for i in range(max_iterations):
             node = root
 
@@ -113,7 +117,9 @@ class MCTSApp:
         return best_child.game_state
 
     def start(self):
+        self.game.info()
         self.game.print_board()
+        print("You are the ■White")
         while True:
             action = input('Enter a move: ')
             if action == 'q':
@@ -129,48 +135,9 @@ class MCTSApp:
                     break
 
 
-
-def monte_carlo_tree_search(root_state: FourInRow, max_iterations: int):
-    if root_state.is_terminal():
-        return root_state
-
-    root = Node(root_state, player=root_state.last_player)
-    for i in range(max_iterations):
-        node = root
-
-        while node.is_fully_expended():
-            node = node.select_child()
-        if not node.game_state.is_terminal():
-            node = node.expand()
-
-        simulation_result = node.rollout()
-        node.back_propagate(simulation_result)
-        print(f"\rSteps:\t{i+1}, Depth:\t{root.depth}", end='')
-    print()
-
-    # print_tree(root)
-
-    best_child = max(root.children, key=lambda child: child.visits)
-    return best_child.game_state
-
-
-def test(game):
-    game.print_board()
-    while True:
-        move = int(input())
-        game.apply_action(move-1)
-        game.print_board()
-        game = monte_carlo_tree_search(game, max_iterations=10000)
-        game.print_board()
-        if game.is_terminal():
-            print(PLAYERS[game.get_winner()], "Win!")
-            break
-
-
 if __name__ == '__main__':
-    four_in_row = FourInRow(7, 5)
+    four_in_row = FourInRow(7, 7)
     app = MCTSApp(four_in_row, max_iterations=10000)
     app.start()
-
-
+    # test(four_in_row)
 
